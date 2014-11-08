@@ -21,10 +21,12 @@ def clean(row):
 def rows(cursor, table_name, _id):
     history_table = table_name + HISTORY_POSTFIX
     cursor.execute(
-        """SELECT * FROM "%s" WHERE id=%d ORDER BY %s ASC;""" % (
-            history_table, _id, DATE_COL))
+        """SELECT * FROM "{}" WHERE id=%s ORDER BY {} ASC;""".format(
+            history_table, DATE_COL),
+        [_id])
     results = cursor.fetchall()
-    cursor.execute("""SELECT * FROM "%s" WHERE id=%d;""" % (table_name, _id))
+    cursor.execute("""SELECT * FROM "{}" WHERE id=%s;""".format(table_name),
+                   [_id])
     results.append(cursor.fetchone())
     column_names = [desc[0] for desc in cursor.description]
     assert any(results), "{} with id {} could not be found".format(table_name, _id)
