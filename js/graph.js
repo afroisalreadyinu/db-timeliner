@@ -8,7 +8,12 @@ var pad_time = function(blah) {
 };
 
 var StateBox = function(snap, info, table_name, long_form) {
-    this.text = table_name + ": " + info.id;
+    if (long_form) {
+        var updated = info.updated.split(".")[0];
+        this.text = table_name + ": " + info.id + " (" + updated + ")";
+    } else {
+        this.text = table_name + ": " + info.id;
+    };
     this.snap = snap;
     this.height = LINE_HEIGHT;
 };
