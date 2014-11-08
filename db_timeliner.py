@@ -60,7 +60,7 @@ def main():
     table_specs = sys.argv[2:]
     conn = psycopg2.connect(db_uri)
     cursor = conn.cursor()
-    table_data = {}
+    output = dict(table_data={})
     for table_spec in table_specs:
         table_name, _id = table_spec.split("=")
         data_rows = rows(cursor, table_name, int(_id))
@@ -68,10 +68,12 @@ def main():
         for first_state, second_state in zip(data_rows[:-1], data_rows[1:]):
             table_seq.append(diff(first_state, second_state))
             table_seq.append(second_state)
-        table_data[table_name] = table_seq
+        output['table_data'][table_name] = table_seq
+    output['date_column'] = DATE_COL;
     with open('graph.html.tmpl', 'r') as graph_file:
         graph_tmpl = graph_file.read()
-    page = Template(graph_tmpl).substitute(transitions=json.dumps(table_data))
+    page = Template(graph_tmpl).substitute(
+        data=json.dumps(output))
     with open('graph.html', 'w') as graph_page:
         graph_page.write(page)
     print("Graph saved in graph.html")

@@ -1,5 +1,7 @@
 "use strict";
+
 var LINE_HEIGHT = 20;
+var DATE_COL;
 
 var pad_time = function(blah) {
     blah = "" + blah;
@@ -7,10 +9,16 @@ var pad_time = function(blah) {
     return pad.substring(0, pad.length - blah.length) + blah;
 };
 
+var format_date = function(date) {
+    var date_str = date.getDate() + "." + date.getMonth() + "." + date.getFullYear();
+    var time = pad_time(date.getHours()) + ":" + pad_time(date.getMinutes()) + ":" + pad_time(date.getSeconds()) + "." + date.getMilliseconds();
+    return date_str + " " + time;
+};
+
 var StateBox = function(snap, info, table_name, long_form) {
     if (long_form) {
-        var updated = info.updated.split(".")[0];
-        this.text = table_name + ": " + info.id + " (" + updated + ")";
+        var updated = new Date(info[DATE_COL]);
+        this.text = table_name + ": " + info.id + " (" + format_date(updated) + ")";
     } else {
         this.text = table_name + ": " + info.id;
     };
@@ -56,12 +64,11 @@ StateBox.prototype.connect_to = function(other_box) {
     return this;
 };
 
+
 var Transition = function(snap, info) {
     StateBox.call(this, snap, info, '');
     var happened = new Date(info.happened);
-    var date = happened.getDate() + "." + happened.getMonth() + "." + happened.getFullYear();
-    var time = pad_time(happened.getHours()) + ":" + pad_time(happened.getMinutes()) + ":" + pad_time(happened.getSeconds()) + "." + happened.getMilliseconds();
-    this.text = ["Transition: " + date + " " + time];
+    this.text = ["Transition: " + format_date(happened)];
     for (var key in info.changes) {
         var change_text = info.changes[key][0] + " -> " + info.changes[key][1];
         this.text.push(key + " : " + change_text);
@@ -127,8 +134,9 @@ Column.prototype.column_middle = function() {
 window.onload = function()  {
     var left_offset = 10;
     var s = Snap("#svg");
-    for (var key in transitions) {
-        var col = new Column(s, key, transitions[key]);
+    DATE_COL = data.date_column;
+    for (var key in data.table_data) {
+        var col = new Column(s, key, data.table_data[key]);
         left_offset = col.draw(left_offset, 30) + 20;
     };
 };
