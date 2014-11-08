@@ -11,7 +11,7 @@ Usage
   page](https://github.com/adobe-webplatform/Snap.svg/releases) into
   the `js` directory.
 
-- Run `db-timeliner db-uri table_name_1=id1 table_name2=id2 ...",
+- Run `db-timeliner db-uri table_name_1=id1 table_name2=id2 ...`,
   where `db-uri` is a database URI in the RFC-1738 format, and the
   rest of the arguments specify the columns to be picked by table name
   and ID.
