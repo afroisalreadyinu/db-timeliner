@@ -49,7 +49,7 @@ def diff(older_row, newer_row, excluded_columns=None):
 
 
 USAGE = """Usage:
-%s db-uri table_name_1:id1 table_name2:id2 ..."""
+%s db-uri table_name_1=id1 table_name2=id2 ..."""
 
 def main():
     if len(sys.argv) < 3:
