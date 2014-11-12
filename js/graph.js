@@ -15,9 +15,12 @@ var format_date = function(date) {
     return date_str + " " + time;
 };
 
-var StateBox = function(snap, info, table_name, long_form) {
+var timed_boxes = [];
+
+var StateBox = function(snap, info, table_name, long_form, column) {
     if (long_form) {
         this.happened = new Date(info[DATE_COL]);
+        timed_boxes.push(this);
         this.text = table_name + ": " + info.id + " (" + format_date(this.happened) + ")";
     } else {
         this.text = table_name + ": " + info.id;
@@ -30,7 +33,7 @@ StateBox.prototype.width = function() { return this.text.length*9; };
 
 StateBox.prototype.draw = function(x, y) {
     this.x = x; this.y = y;
-    var box = this.snap.rect(x, y, this.width(), LINE_HEIGHT);
+    var box = this.snap.rect(x, y, this.width(), this.height);
     box.attr({
         fill: "rgb(236, 240, 241)",
         stroke: "#1f2c39",
@@ -65,15 +68,17 @@ StateBox.prototype.connect_to = function(other_box) {
 };
 
 
-var Transition = function(snap, info) {
+var Transition = function(snap, info, column) {
     StateBox.call(this, snap, info, '');
-    var happened = new Date(info.happened);
-    this.text = ["Transition: " + format_date(happened)];
+    this.happened = new Date(info.happened);
+    this.text = ["Transition: " + format_date(this.happened)];
+    timed_boxes.push(this);
     for (var key in info.changes) {
         var change_text = info.changes[key][0] + " -> " + info.changes[key][1];
         this.text.push(key + " : " + change_text);
     };
     this.height = LINE_HEIGHT * this.text.length;
+    this.column = column;
 };
 
 Transition.prototype = Object.create(StateBox.prototype);
@@ -102,14 +107,16 @@ Transition.prototype.width = function() {
 var Column = function(snap, table_info) {
     this.boxes = [];
     var sequence = table_info.sequence;
-    for (var index = 0; index < sequence.length; index++) {
-        if (sequence[index].transition) {
-            this.boxes.push(new Transition(snap, sequence[index], table_info.name));
+    var self = this;
+    sequence.forEach(function(piece, index) {
+        if (piece.transition) {
+            self.boxes.push(new Transition(snap, piece, table_info.name, self));
         } else {
-            this.boxes.push(new StateBox(snap, sequence[index], table_info.name, index===0));
+            self.boxes.push(new StateBox(snap, piece, table_info.name, index===0, self));
         };
-    };
+    });
 };
+
 Column.prototype.draw = function(offset, margin) {
     var col_middle = this.column_middle();
     var middle = col_middle + offset;
@@ -123,12 +130,10 @@ Column.prototype.draw = function(offset, margin) {
 };
 
 Column.prototype.column_middle = function() {
-    var _middle = 0;
-    for (var index = 0; index < this.boxes.length; index++) {
-        var entry_middle = this.boxes[index].middle();
-        if (entry_middle > _middle) _middle = entry_middle;
-    };
-    return _middle;
+    if (typeof this._column_middle !== 'undefined') {return this._column_middle; };
+    var middles = this.boxes.map(function(box) { return box.middle(); });
+    this._column_middle = Math.max.apply(null, middles);
+    return this._column_middle;
 };
 
 
@@ -137,8 +142,11 @@ window.onload = function()  {
     var s = Snap("#svg");
     DATE_COL = data.date_column;
     var table_data = data.table_data
+    var timed_entries = [];
     for (var index = 0; index < table_data.length; index++ ) {
         var col = new Column(s, table_data[index]);
         left_offset = col.draw(left_offset, 30) + 20;
     };
+    timed_boxes.sort(function(x, y) { return x.happened > y.happened; });
+    timed_boxes.forEach(function(x, time_index){ x.time_index = time_index; });
 };
