@@ -49,6 +49,14 @@ def diff(older_row, newer_row, excluded_columns=None):
             difference['changes'][key] = [older_row[key], newer_row[key]]
     return difference
 
+def create_table_data(table_spec, cursor, index):
+    table_name, _id = table_spec.split("=")
+    data_rows = rows(cursor, table_name, int(_id))
+    table_seq = data_rows[:1]
+    for first_state, second_state in zip(data_rows[:-1], data_rows[1:]):
+        table_seq.append(diff(first_state, second_state))
+        table_seq.append(second_state)
+    return dict(name=table_name, index=index, sequence=table_seq)
 
 USAGE = """Usage:
 %s db-uri table_name_1=id1 table_name2=id2 ..."""
@@ -60,16 +68,10 @@ def main():
     table_specs = sys.argv[2:]
     conn = psycopg2.connect(db_uri)
     cursor = conn.cursor()
-    output = dict(table_data={})
-    for table_spec in table_specs:
-        table_name, _id = table_spec.split("=")
-        data_rows = rows(cursor, table_name, int(_id))
-        table_seq = data_rows[:1]
-        for first_state, second_state in zip(data_rows[:-1], data_rows[1:]):
-            table_seq.append(diff(first_state, second_state))
-            table_seq.append(second_state)
-        output['table_data'][table_name] = table_seq
-    output['date_column'] = DATE_COL;
+    output = dict(table_data=[], date_column=DATE_COL)
+    for index, table_spec in enumerate(table_specs):
+        output['table_data'].append(create_table_data(table_spec, cursor, index))
+
     with open('graph.html.tmpl', 'r') as graph_file:
         graph_tmpl = graph_file.read()
     page = Template(graph_tmpl).substitute(

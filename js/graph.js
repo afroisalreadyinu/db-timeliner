@@ -17,8 +17,8 @@ var format_date = function(date) {
 
 var StateBox = function(snap, info, table_name, long_form) {
     if (long_form) {
-        var updated = new Date(info[DATE_COL]);
-        this.text = table_name + ": " + info.id + " (" + format_date(updated) + ")";
+        this.happened = new Date(info[DATE_COL]);
+        this.text = table_name + ": " + info.id + " (" + format_date(this.happened) + ")";
     } else {
         this.text = table_name + ": " + info.id;
     };
@@ -99,13 +99,14 @@ Transition.prototype.width = function() {
     )*9;
 };
 
-var Column = function(snap, table_name, infos) {
+var Column = function(snap, table_info) {
     this.boxes = [];
-    for (var index = 0; index < infos.length; index++) {
-        if (infos[index].transition) {
-            this.boxes.push(new Transition(snap, infos[index], table_name));
+    var sequence = table_info.sequence;
+    for (var index = 0; index < sequence.length; index++) {
+        if (sequence[index].transition) {
+            this.boxes.push(new Transition(snap, sequence[index], table_info.name));
         } else {
-            this.boxes.push(new StateBox(snap, infos[index], table_name, index===0));
+            this.boxes.push(new StateBox(snap, sequence[index], table_info.name, index===0));
         };
     };
 };
@@ -135,8 +136,9 @@ window.onload = function()  {
     var left_offset = 10;
     var s = Snap("#svg");
     DATE_COL = data.date_column;
-    for (var key in data.table_data) {
-        var col = new Column(s, key, data.table_data[key]);
+    var table_data = data.table_data
+    for (var index = 0; index < table_data.length; index++ ) {
+        var col = new Column(s, table_data[index]);
         left_offset = col.draw(left_offset, 30) + 20;
     };
 };
