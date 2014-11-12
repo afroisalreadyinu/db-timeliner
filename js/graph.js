@@ -15,6 +15,15 @@ var format_date = function(date) {
     return date_str + " " + time;
 };
 
+var text_width = function(text) {
+    var test = document.createElement("div");
+    test.className = 'width-test';
+    test.innerHTML = text;
+    document.body.appendChild(test);
+    //test.style.fontSize = fontSize;
+    return test.clientWidth + 5;
+};
+
 var timed_boxes = [];
 
 var StateBox = function(snap, info, table_name, long_form, column) {
@@ -27,13 +36,15 @@ var StateBox = function(snap, info, table_name, long_form, column) {
     };
     this.snap = snap;
     this.height = LINE_HEIGHT;
+    this.width = text_width(this.text);
 };
 
-StateBox.prototype.width = function() { return this.text.length*9; };
+StateBox.prototype.width = function() {
+};
 
 StateBox.prototype.draw = function(x, y) {
     this.x = x; this.y = y;
-    var box = this.snap.rect(x, y, this.width(), this.height);
+    var box = this.snap.rect(x, y, this.width, this.height);
     box.attr({
         fill: "rgb(236, 240, 241)",
         stroke: "#1f2c39",
@@ -44,18 +55,18 @@ StateBox.prototype.draw = function(x, y) {
 };
 
 StateBox.prototype.draw_at_middle = function(middle, y) {
-        var x = middle - (this.width()/2);
+        var x = middle - (this.width/2);
         this.draw(x, y);
     };
 
-StateBox.prototype.middle = function() { return this.width()/2; };
+StateBox.prototype.middle = function() { return this.width/2; };
 
 StateBox.prototype.bottom_middle = function() {
-        return {x: this.x + this.width()/2, y: this.y+this.height};
+        return {x: this.x + this.width/2, y: this.y+this.height};
     };
 
 StateBox.prototype.top_middle = function() {
-        return {x: this.x + this.width()/2, y: this.y};
+        return {x: this.x + this.width/2, y: this.y};
     };
 
 StateBox.prototype.connect_to = function(other_box) {
@@ -78,6 +89,9 @@ var Transition = function(snap, info, column) {
         this.text.push(key + " : " + change_text);
     };
     this.height = LINE_HEIGHT * this.text.length;
+    this.width = Math.max.apply(
+        null,
+        this.text.map(function(x) { return text_width(x); }));
     this.column = column;
 };
 
@@ -85,7 +99,7 @@ Transition.prototype = Object.create(StateBox.prototype);
 
 Transition.prototype.draw = function(x, y) {
     this.x = x; this.y = y;
-    var box = this.snap.rect(x, y, this.width(), this.height);
+    var box = this.snap.rect(x, y, this.width, this.height);
     box.attr({
         fill: "rgb(236, 240, 241)",
         stroke: "#1f2c39",
@@ -95,13 +109,6 @@ Transition.prototype.draw = function(x, y) {
         this.snap.text(x+3, y+15 + LINE_HEIGHT*counter, this.text[counter]);
     };
     return this;
-};
-
-Transition.prototype.width = function() {
-    return Math.max.apply(
-        null,
-        this.text.map(function(x) { return x.length;})
-    )*9;
 };
 
 var Column = function(snap, table_info) {
