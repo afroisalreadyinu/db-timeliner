@@ -17,3 +17,6 @@ Usage
   and ID.
 
 - Open the resulting file `graph.html` in a browser.
+
+The Python parts will soon be ported to javascript to make the code
+single-language.
