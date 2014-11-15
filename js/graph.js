@@ -2,6 +2,7 @@
 
 var LINE_HEIGHT = 20;
 var DATE_COL;
+var DEFAULT_VERT_MARGIN = 30;
 
 var pad_time = function(blah) {
     blah = "" + blah;
@@ -37,29 +38,37 @@ var StateBox = function(snap, info, table_name, long_form, column) {
     this.snap = snap;
     this.height = LINE_HEIGHT;
     this.width = text_width(this.text);
+    this.column = column;
 };
 
-StateBox.prototype.width = function() {
-};
-
-StateBox.prototype.draw = function(x, y) {
-    this.x = x; this.y = y;
-    var box = this.snap.rect(x, y, this.width, this.height);
+StateBox.prototype.draw = function(y, connect_to_previous) {
+    this.x = this.column.column_middle() - (this.width/2);
+    if (this.previous && this.previous.y >= y) {
+        y = this.previous.y + this.previous.height + DEFAULT_VERT_MARGIN;
+    };
+    this.y = y;
+    this.column.last_y = this.y;
+    var box = this.snap.rect(this.x, this.y, this.width, this.height);
     box.attr({
         fill: "rgb(236, 240, 241)",
         stroke: "#1f2c39",
         strokeWidth: 1
     });
-    this.snap.text(x+3, y+15, this.text);
+    this.draw_text();
+    if (this.next && !this.next.happened) {
+        this.next.draw(this.y + this.height + DEFAULT_VERT_MARGIN);
+        this.connect_to(this.next);
+    };
+    if (connect_to_previous && this.previous) {
+        this.connect_to(this.previous);
+    };
     return this;
 };
 
-StateBox.prototype.draw_at_middle = function(middle, y) {
-        var x = middle - (this.width/2);
-        this.draw(x, y);
-    };
+StateBox.prototype.draw_text = function() {
+    this.snap.text(this.x+3, this.y+15, this.text);
+};
 
-StateBox.prototype.middle = function() { return this.width/2; };
 
 StateBox.prototype.bottom_middle = function() {
         return {x: this.x + this.width/2, y: this.y+this.height};
@@ -70,19 +79,28 @@ StateBox.prototype.top_middle = function() {
     };
 
 StateBox.prototype.connect_to = function(other_box) {
-    this.snap.line(this.top_middle().x,
-                   this.top_middle().y,
-                   other_box.bottom_middle().x,
-                   other_box.bottom_middle().y)
-        .attr({stroke:"#1f2c39"});
+    var line;
+    if (this.y > other_box.y) {
+        line = this.snap.line(this.top_middle().x,
+                              this.top_middle().y,
+                              other_box.bottom_middle().x,
+                              other_box.bottom_middle().y);
+    } else {
+        line = this.snap.line(other_box.top_middle().x,
+                              other_box.top_middle().y,
+                              this.bottom_middle().x,
+                              this.bottom_middle().y);
+    };
+    line.attr({stroke:"#1f2c39"});
     return this;
 };
 
 
-var Transition = function(snap, info, column) {
+var Transition = function(snap, info, table_name, column) {
     StateBox.call(this, snap, info, '');
     this.happened = new Date(info.happened);
     this.text = ["Transition: " + format_date(this.happened)];
+    this.transition = true;
     timed_boxes.push(this);
     for (var key in info.changes) {
         var change_text = info.changes[key][0] + " -> " + info.changes[key][1];
@@ -97,49 +115,42 @@ var Transition = function(snap, info, column) {
 
 Transition.prototype = Object.create(StateBox.prototype);
 
-Transition.prototype.draw = function(x, y) {
-    this.x = x; this.y = y;
-    var box = this.snap.rect(x, y, this.width, this.height);
-    box.attr({
-        fill: "rgb(236, 240, 241)",
-        stroke: "#1f2c39",
-        strokeWidth: 1
-    });
+Transition.prototype.draw_text = function() {
     for (var counter=0; counter < this.text.length; counter++) {
-        this.snap.text(x+3, y+15 + LINE_HEIGHT*counter, this.text[counter]);
+        this.snap.text(this.x+3,
+                       this.y+15 + LINE_HEIGHT*counter,
+                       this.text[counter]);
     };
-    return this;
 };
 
-var Column = function(snap, table_info) {
+
+var Column = function(snap, table_info, left_offset) {
     this.boxes = [];
     var sequence = table_info.sequence;
     var self = this;
+    var new_box, last;
     sequence.forEach(function(piece, index) {
         if (piece.transition) {
-            self.boxes.push(new Transition(snap, piece, table_info.name, self));
+            new_box = new Transition(snap, piece, table_info.name, self);
         } else {
-            self.boxes.push(new StateBox(snap, piece, table_info.name, index===0, self));
+            new_box = new StateBox(snap, piece, table_info.name, index===0, self);
         };
+        self.boxes.push(new_box);
+        if (last) {
+            last.next = new_box;
+            new_box.previous = last;
+        };
+        last = new_box;
     });
+    this.width = Math.max.apply(null, self.boxes.map(function(x) {return x.width;}));
+    this.left_offset = left_offset;
 };
 
-Column.prototype.draw = function(offset, margin) {
-    var col_middle = this.column_middle();
-    var middle = col_middle + offset;
-    var y_index = 1;
-    for (var index = 0; index < this.boxes.length; index++) {
-        this.boxes[index].draw_at_middle(middle, y_index);
-        y_index += this.boxes[index].height + margin;
-        if (!!index) this.boxes[index].connect_to(this.boxes[index-1]);
-    };
-    return col_middle*2 + offset;
-};
 
 Column.prototype.column_middle = function() {
-    if (typeof this._column_middle !== 'undefined') {return this._column_middle; };
-    var middles = this.boxes.map(function(box) { return box.middle(); });
-    this._column_middle = Math.max.apply(null, middles);
+    if (typeof this._column_middle !== 'undefined') return this._column_middle;
+    var widths = this.boxes.map(function(box) { return box.width; });
+    this._column_middle = Math.max.apply(null, widths)/2 + this.left_offset;
     return this._column_middle;
 };
 
@@ -151,9 +162,15 @@ window.onload = function()  {
     var table_data = data.table_data
     var timed_entries = [];
     for (var index = 0; index < table_data.length; index++ ) {
-        var col = new Column(s, table_data[index]);
-        left_offset = col.draw(left_offset, 30) + 20;
+        var col = new Column(s, table_data[index], left_offset);
+        left_offset += col.width + 20;
     };
     timed_boxes.sort(function(x, y) { return x.happened > y.happened; });
     timed_boxes.forEach(function(x, time_index){ x.time_index = time_index; });
+    var latest_y = 5;
+    for (var index = 0; index < timed_boxes.length; index++) {
+        var box = timed_boxes[index];
+        box.draw(latest_y, true);
+        latest_y = box.y + box.height + DEFAULT_VERT_MARGIN;
+    }
 };
