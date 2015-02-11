@@ -71,12 +71,12 @@ StateBox.prototype.draw_text = function() {
 
 
 StateBox.prototype.bottom_middle = function() {
-        return {x: this.x + this.width/2, y: this.y+this.height};
-    };
+    return {x: this.x + this.width/2, y: this.y+this.height};
+};
 
 StateBox.prototype.top_middle = function() {
-        return {x: this.x + this.width/2, y: this.y};
-    };
+    return {x: this.x + this.width/2, y: this.y};
+};
 
 StateBox.prototype.connect_to = function(other_box) {
     var line;
