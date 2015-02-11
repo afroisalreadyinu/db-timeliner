@@ -165,7 +165,7 @@ window.onload = function()  {
         var col = new Column(s, table_data[index], left_offset);
         left_offset += col.width + 20;
     };
-    timed_boxes.sort(function(x, y) { return x.happened > y.happened; });
+    timed_boxes.sort(function(x, y) { if (x.happened > y.happened) return 1 ; else return -1;});
     timed_boxes.forEach(function(x, time_index){ x.time_index = time_index; });
     var latest_y = 5;
     for (var index = 0; index < timed_boxes.length; index++) {
