@@ -11,7 +11,7 @@ var pad_time = function(blah) {
 };
 
 var format_date = function(date) {
-    var date_str = date.getDate() + "." + date.getMonth() + "." + date.getFullYear();
+    var date_str = date.getDate() + "." + (date.getMonth() + 1) + "." + date.getFullYear();
     var time = pad_time(date.getHours()) + ":" + pad_time(date.getMinutes()) + ":" + pad_time(date.getSeconds()) + "." + date.getMilliseconds();
     return date_str + " " + time;
 };
